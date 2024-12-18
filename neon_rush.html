@@ -5,90 +5,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Neon Rush</title>
   <style>
+    /* General Styling */
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
+      font-family: Arial, sans-serif;
       background: linear-gradient(to bottom, #121212, #282828);
-      color: #ffffff;
-    }
-
-    header {
-      text-align: center;
-      padding: 20px;
-      background: #1e1e1e;
-      color: #00ffcc;
-      font-size: 1.5rem;
-    }
-
-    .game-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: 20px;
+      color: white;
     }
 
     canvas {
+      display: block;
+      margin: 20px auto;
       background: #0f3460;
       border: 3px solid #e94560;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
-      margin: 20px;
     }
 
-    .back-button {
-      display: inline-block;
-      padding: 10px 20px;
-      margin-top: 10px;
-      background: #4caf50;
-      color: #ffffff;
-      text-decoration: none;
-      font-size: 1.2rem;
-      border-radius: 5px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
-    }
-
-    .back-button:hover {
-      background: #45a049;
-    }
-
-    .instructions {
-      margin-top: 20px;
-      font-size: 1rem;
-      line-height: 1.5;
-      color: #cccccc;
-    }
-
-    .score {
-      position: absolute;
-      top: 10px;
-      right: 20px;
-      font-size: 1.5rem;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 5px 15px;
-      border-radius: 10px;
-      color: #ffe600;
-      box-shadow: 0 0 10px #ffe600;
-    }
-
-    .death-screen {
+    .screen {
       display: none;
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.9);
       color: white;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
+      z-index: 10;
     }
 
-    .death-screen h1 {
+    .screen.active {
+      display: flex;
+    }
+
+    .screen h1 {
       color: #ff4b5c;
     }
 
-    .death-screen button {
+    .screen button {
       margin-top: 20px;
       padding: 10px 20px;
       background: #4caf50;
@@ -99,26 +56,38 @@
       cursor: pointer;
     }
 
-    .death-screen button:hover {
+    .screen button:hover {
       background: #45a049;
+    }
+
+    .score {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      font-size: 1.5rem;
+      color: #ffe600;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 5px 15px;
+      border-radius: 10px;
     }
   </style>
 </head>
 <body>
-  <header>Neon Rush</header>
-  <div class="game-container">
-    <canvas id="gameCanvas"></canvas>
-    <div class="score" id="score">Score: 0</div>
-    <a href="index.html" class="back-button">Back to Home</a>
-    <div class="instructions">
-      <p>Use your mouse to control the glowing orb and collect energy rings. Avoid the obstacles and try to achieve the highest score!</p>
-    </div>
-    <div class="death-screen" id="deathScreen">
-      <h1>Game Over</h1>
-      <p>Your Score: <span id="finalScore"></span></p>
-      <button onclick="restartGame()">Restart</button>
-    </div>
+  <canvas id="gameCanvas"></canvas>
+  <div class="screen" id="startScreen">
+    <h1>Welcome to Neon Rush</h1>
+    <button onclick="startGame()">Start Game</button>
   </div>
+  <div class="screen" id="pauseScreen">
+    <h1>Game Paused</h1>
+    <button onclick="resumeGame()">Resume</button>
+  </div>
+  <div class="screen" id="deathScreen">
+    <h1>Game Over</h1>
+    <p>Your Score: <span id="finalScore"></span></p>
+    <button onclick="restartGame()">Restart</button>
+  </div>
+  <div class="score" id="scoreDisplay">Score: 0</div>
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
@@ -128,16 +97,12 @@
 
     let score = 0;
     let gameOver = false;
+    let isPaused = false;
 
     const player = { x: canvas.width / 2, y: canvas.height - 50, radius: 15, color: "#00ffcc" };
     const obstacles = [];
     const rings = [];
     const mouse = { x: canvas.width / 2, y: canvas.height - 50 };
-
-    canvas.addEventListener("mousemove", (e) => {
-      const rect = canvas.getBoundingClientRect();
-      mouse.x = e.clientX - rect.left;
-    });
 
     function createObstacle() {
       obstacles.push({
@@ -160,14 +125,28 @@
       });
     }
 
+    canvas.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+    });
+
     function update() {
-      if (gameOver) return;
+      if (gameOver || isPaused) return;
 
       player.x += (mouse.x - player.x) * 0.1;
 
       obstacles.forEach((o) => {
         o.y += o.speed;
         if (o.y > canvas.height) obstacles.shift();
+
+        if (
+          player.x + player.radius > o.x &&
+          player.x - player.radius < o.x + o.width &&
+          player.y + player.radius > o.y &&
+          player.y - player.radius < o.y + o.height
+        ) {
+          endGame();
+        }
       });
 
       rings.forEach((r) => {
@@ -184,11 +163,7 @@
         }
       });
 
-      if (player.x - player.radius < 0 || player.x + player.radius > canvas.width) {
-        endGame();
-      }
-
-      document.getElementById("score").innerText = `Score: ${score}`;
+      document.getElementById("scoreDisplay").innerText = `Score: ${score}`;
     }
 
     function render() {
@@ -212,10 +187,15 @@
       });
     }
 
+    function startGame() {
+      document.getElementById("startScreen").classList.remove("active");
+      gameLoop();
+    }
+
     function endGame() {
       gameOver = true;
       document.getElementById("finalScore").innerText = score;
-      document.getElementById("deathScreen").style.display = "flex";
+      document.getElementById("deathScreen").classList.add("active");
     }
 
     function restartGame() {
@@ -223,20 +203,37 @@
       gameOver = false;
       obstacles.length = 0;
       rings.length = 0;
-      document.getElementById("deathScreen").style.display = "none";
+      player.x = canvas.width / 2;
+      player.y = canvas.height - 50;
+      document.getElementById("deathScreen").classList.remove("active");
       gameLoop();
     }
+
+    function pauseGame() {
+      isPaused = true;
+      document.getElementById("pauseScreen").classList.add("active");
+    }
+
+    function resumeGame() {
+      isPaused = false;
+      document.getElementById("pauseScreen").classList.remove("active");
+      gameLoop();
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "p") pauseGame();
+    });
 
     function gameLoop() {
       update();
       render();
-      if (!gameOver) requestAnimationFrame(gameLoop);
+      if (!gameOver && !isPaused) requestAnimationFrame(gameLoop);
     }
 
     setInterval(createObstacle, 1000);
     setInterval(createRing, 1500);
 
-    gameLoop();
+    document.getElementById("startScreen").classList.add("active");
   </script>
 </body>
 </html>
