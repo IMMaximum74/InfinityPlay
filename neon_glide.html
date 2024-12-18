@@ -3,160 +3,188 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Neon Glide</title>
+  <title>Neon Rush</title>
   <style>
+    /* General Styles */
     body {
       margin: 0;
-      overflow: hidden;
-      background: linear-gradient(to bottom, #0f0f1f, #1a1a3f);
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #121212, #282828);
+      color: #ffffff;
+      text-align: center;
+    }
+
+    header {
+      padding: 10px;
+      background: #1e1e1e;
+      color: #00ffcc;
+      font-size: 1.5rem;
+    }
+
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 20px;
     }
 
     canvas {
       display: block;
-      margin: 0 auto;
+      background: #0f3460;
+      border: 3px solid #e94560;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+      margin: 10px;
+    }
+
+    .score {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 1.5rem;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 5px 15px;
+      border-radius: 10px;
+      color: #ffe600;
+      box-shadow: 0 0 10px #ffe600;
+    }
+
+    .back-button {
+      display: inline-block;
+      margin: 10px;
+      padding: 10px 20px;
+      background: #4caf50;
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 5px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      font-size: 1rem;
+    }
+
+    .back-button:hover {
+      background: #45a049;
+    }
+
+    .death-screen {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .death-screen h1 {
+      color: #ff4b5c;
     }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas"></canvas>
+  <header>Neon Rush</header>
+  <div class="game-container">
+    <a href="index.html" class="back-button">Back to Home</a>
+    <div class="score" id="score">Score: 0</div>
+    <canvas id="gameCanvas"></canvas>
+    <div class="death-screen" id="deathScreen">
+      <h1>Game Over</h1>
+      <p>Your Score: <span id="finalScore"></span></p>
+      <button onclick="restartGame()">Restart</button>
+    </div>
+  </div>
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    // Set canvas dimensions
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = 800;
+    canvas.height = 600;
 
-    // Game variables
-    const orb = {
-      x: canvas.width / 2,
-      y: canvas.height / 2,
-      radius: 15,
-      color: "#00ffcc",
-      speed: 5,
-    };
+    let score = 0;
+    let gameOver = false;
 
+    const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 15, color: "#00ffcc" };
     const obstacles = [];
     const rings = [];
-    let score = 0;
 
-    // Generate obstacles
     function createObstacle() {
-      const width = Math.random() * 200 + 50;
-      const height = 20;
-      const x = Math.random() * (canvas.width - width);
-      const y = -height;
-
-      obstacles.push({ x, y, width, height, color: "#ff4b5c" });
+      obstacles.push({
+        x: Math.random() * canvas.width,
+        y: -20,
+        width: 50,
+        height: 10,
+        speed: 2 + score / 100,
+        color: "#ff4b5c",
+      });
     }
 
-    // Generate rings
     function createRing() {
-      const x = Math.random() * (canvas.width - 20) + 10;
-      const y = -20;
-
-      rings.push({ x, y, radius: 10, color: "#ffe600" });
+      rings.push({
+        x: Math.random() * canvas.width,
+        y: -20,
+        radius: 10,
+        speed: 2 + score / 100,
+        color: "#ffe600",
+      });
     }
 
-    // Update positions
     function update() {
-      orb.x += (mouse.x - orb.x) * 0.1;
-      orb.y += (mouse.y - orb.y) * 0.1;
+      if (gameOver) return;
 
-      // Move obstacles
-      obstacles.forEach((obstacle, index) => {
-        obstacle.y += orb.speed;
-
-        // Remove obstacles off-screen
-        if (obstacle.y > canvas.height) {
-          obstacles.splice(index, 1);
-        }
-
-        // Collision detection
-        if (
-          orb.x + orb.radius > obstacle.x &&
-          orb.x - orb.radius < obstacle.x + obstacle.width &&
-          orb.y + orb.radius > obstacle.y &&
-          orb.y - orb.radius < obstacle.y + obstacle.height
-        ) {
-          alert("Game Over! Your Score: " + score);
-          document.location.reload();
-        }
+      obstacles.forEach((o) => {
+        o.y += o.speed;
+        if (o.y > canvas.height) obstacles.shift();
       });
 
-      // Move rings
-      rings.forEach((ring, index) => {
-        ring.y += orb.speed;
-
-        // Remove rings off-screen
-        if (ring.y > canvas.height) {
-          rings.splice(index, 1);
-        }
-
-        // Collect ring
-        const dx = orb.x - ring.x;
-        const dy = orb.y - ring.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance < orb.radius + ring.radius) {
-          rings.splice(index, 1);
-          score += 10;
-          orb.speed += 0.2; // Increase speed on collecting a ring
-        }
+      rings.forEach((r) => {
+        r.y += r.speed;
+        if (r.y > canvas.height) rings.shift();
       });
+
+      score++;
+      document.getElementById("score").innerText = `Score: ${score}`;
     }
 
-    // Draw everything
-    function draw() {
-      // Clear canvas
+    function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw orb
       ctx.beginPath();
-      ctx.arc(orb.x, orb.y, orb.radius, 0, Math.PI * 2);
-      ctx.fillStyle = orb.color;
+      ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+      ctx.fillStyle = player.color;
       ctx.fill();
-      ctx.closePath();
 
-      // Draw obstacles
-      obstacles.forEach((obstacle) => {
-        ctx.fillStyle = obstacle.color;
-        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+      obstacles.forEach((o) => {
+        ctx.fillStyle = o.color;
+        ctx.fillRect(o.x, o.y, o.width, o.height);
       });
 
-      // Draw rings
-      rings.forEach((ring) => {
+      rings.forEach((r) => {
         ctx.beginPath();
-        ctx.arc(ring.x, ring.y, ring.radius, 0, Math.PI * 2);
-        ctx.fillStyle = ring.color;
+        ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+        ctx.fillStyle = r.color;
         ctx.fill();
-        ctx.closePath();
       });
-
-      // Draw score
-      ctx.font = "24px Arial";
-      ctx.fillStyle = "#ffffff";
-      ctx.fillText("Score: " + score, 20, 40);
     }
 
-    // Game loop
     function gameLoop() {
       update();
-      draw();
-      requestAnimationFrame(gameLoop);
+      render();
+      if (!gameOver) requestAnimationFrame(gameLoop);
     }
 
-    // Mouse movement
-    const mouse = { x: canvas.width / 2, y: canvas.height / 2 };
-    canvas.addEventListener("mousemove", (e) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-    });
+    function restartGame() {
+      gameOver = false;
+      score = 0;
+      obstacles.length = 0;
+      rings.length = 0;
+      document.getElementById("deathScreen").style.display = "none";
+      gameLoop();
+    }
 
-    // Obstacle and ring intervals
     setInterval(createObstacle, 1000);
-    setInterval(createRing, 2000);
-
-    // Start game
+    setInterval(createRing, 1500);
     gameLoop();
   </script>
 </body>
