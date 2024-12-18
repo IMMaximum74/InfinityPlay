@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel Jump</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: linear-gradient(to bottom, #1a1a2e, #282828);
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: #0f3460;
+      border: 3px solid #e94560;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Set canvas size
+    canvas.width = 400;
+    canvas.height = 600;
+
+    // Game variables
+    let player = { x: 200, y: 500, width: 20, height: 20, dy: 0, jumpForce: -10, gravity: 0.5, color: "#ffdd57" };
+    const platforms = [];
+    const platformWidth = 70;
+    const platformHeight = 10;
+    let score = 0;
+    let gameOver = false;
+
+    // Create initial platforms
+    for (let i = 0; i < 6; i++) {
+      platforms.push({
+        x: Math.random() * (canvas.width - platformWidth),
+        y: 100 * i,
+        width: platformWidth,
+        height: platformHeight,
+        color: "#00ffcc",
+      });
+    }
+
+    // Draw rectangle
+    function drawRect(x, y, width, height, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, width, height);
+    }
+
+    // Update game logic
+    function update() {
+      if (gameOver) return;
+
+      // Apply gravity
+      player.dy += player.gravity;
+      player.y += player.dy;
+
+      // Move platforms
+      platforms.forEach((platform) => {
+        platform.y += 2;
+
+        // Reset platform to top if it goes off-screen
+        if (platform.y > canvas.height) {
+          platform.y = -platformHeight;
+          platform.x = Math.random() * (canvas.width - platformWidth);
+          score++;
+        }
+      });
+
+      // Check collisions with platforms
+      platforms.forEach((platform) => {
+        if (
+          player.dy > 0 && // Player is falling
+          player.x + player.width > platform.x &&
+          player.x < platform.x + platform.width &&
+          player.y + player.height > platform.y &&
+          player.y + player.height < platform.y + platform.height
+        ) {
+          player.dy = player.jumpForce; // Jump on collision
+        }
+      });
+
+      // Game over condition
+      if (player.y > canvas.height) {
+        gameOver = true;
+        alert(`Game Over! Your Score: ${score}`);
+        document.location.reload();
+      }
+    }
+
+    // Draw game elements
+    function draw() {
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw player
+      drawRect(player.x, player.y, player.width, player.height, player.color);
+
+      // Draw platforms
+      platforms.forEach((platform) => {
+        drawRect(platform.x, platform.y, platform.width, platform.height, platform.color);
+      });
+
+      // Draw score
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "20px Arial";
+      ctx.fillText(`Score: ${score}`, 10, 20);
+    }
+
+    // Game loop
+    function gameLoop() {
+      update();
+      draw();
+      if (!gameOver) requestAnimationFrame(gameLoop);
+    }
+
+    // Move player with arrow keys
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft" && player.x > 0) {
+        player.x -= 20;
+      } else if (e.key === "ArrowRight" && player.x + player.width < canvas.width) {
+        player.x += 20;
+      }
+    });
+
+    gameLoop();
+  </script>
+</body>
+</html>
