@@ -5,29 +5,91 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JumpQuest</title>
     <style>
-        body {
+        /* General reset */
+        * {
             margin: 0;
-            overflow: hidden;
-            background-color: #1e1e1e;
+            padding: 0;
+            box-sizing: border-box;
         }
+
+        body {
+            font-family: Arial, sans-serif;
+            color: #fff;
+            background: linear-gradient(to bottom, #121212, #1a1a1a);
+            text-align: center;
+            line-height: 1.6;
+        }
+
         canvas {
             display: block;
             margin: 0 auto;
+            border: 4px solid #ff4b5c;
+            border-radius: 15px;
+            box-shadow: 0 0 20px #ff4b5c;
+        }
+
+        /* Header Styles */
+        header {
+            padding: 20px;
+            background: #0f3460;
+            color: #ff4b5c;
+            text-shadow: 0 0 10px #ff3860;
+        }
+
+        header h1 {
+            font-size: 3rem;
+        }
+
+        header p {
+            font-size: 1.2rem;
+        }
+
+        /* Score and UI Styles */
+        .score {
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            font-size: 24px;
+            color: #ff4b5c;
+            font-weight: bold;
+            text-shadow: 0 0 5px #ff4b5c;
+        }
+
+        /* Footer Styles */
+        footer {
+            margin-top: 20px;
+            padding: 10px;
+            background: #0f3460;
+        }
+
+        footer p {
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
+    <header>
+        <h1>JumpQuest</h1>
+        <p>Leap through the platforms, avoid falling, and increase your score!</p>
+    </header>
+    <main>
+        <canvas id="gameCanvas"></canvas>
+    </main>
+    <footer>
+        <p>&copy; 2024 JumpQuest Game</p>
+    </footer>
+
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
+        // Set up canvas size based on the window size
         canvas.width = window.innerWidth * 0.8;
         canvas.height = window.innerHeight * 0.8;
 
         // Game Variables
         const gravity = 0.5;
-        const player = {
+        let player = {
             x: 50,
             y: canvas.height - 100,
             width: 50,
@@ -35,13 +97,14 @@
             speed: 5,
             dx: 0,
             dy: 0,
-            color: '#00ff00'
+            color: '#00ff00',
+            jumpHeight: -12
         };
+
         let platforms = [];
         let score = 0;
         let isJumping = false;
 
-        // Key Controls
         const keys = { left: false, right: false, up: false };
 
         // Draw Player
@@ -58,20 +121,18 @@
 
         // Draw Score
         function drawScore() {
-            ctx.fillStyle = '#fff';
-            ctx.font = '20px Arial';
+            ctx.fillStyle = '#ff4b5c';
+            ctx.font = '24px Arial';
             ctx.fillText('Score: ' + score, 20, 30);
         }
 
-        // Move Player
+        // Player Movement
         function movePlayer() {
             if (keys.left) player.dx = -player.speed;
             else if (keys.right) player.dx = player.speed;
             else player.dx = 0;
 
-            if (isJumping) {
-                player.dy += gravity;
-            }
+            if (isJumping) player.dy += gravity;
 
             player.x += player.dx;
             player.y += player.dy;
@@ -80,7 +141,7 @@
             if (player.x < 0) player.x = 0;
             if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
 
-            // Ground collision
+            // Collision with ground
             if (player.y + player.height > canvas.height) {
                 player.y = canvas.height - player.height;
                 player.dy = 0;
@@ -98,7 +159,7 @@
             }
         }
 
-        // Detect Platform Collisions
+        // Detect Collisions
         function detectCollisions() {
             platforms.forEach(platform => {
                 if (player.x + player.width > platform.x && player.x < platform.x + platform.width &&
@@ -114,6 +175,7 @@
         // Game Loop
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
             movePlayer();
             drawPlayer();
             drawPlatforms();
@@ -129,7 +191,7 @@
             if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
             if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
             if ((e.key === 'ArrowUp' || e.key === ' ' || e.key === 'w') && !isJumping) {
-                player.dy = -10;
+                player.dy = player.jumpHeight;
                 isJumping = true;
             }
         });
